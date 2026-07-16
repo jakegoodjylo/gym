@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light — minimal, near-monochrome */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 8%;
+    --primary: 240 10% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 44%;
+    --accent: 240 5% 95%;
+    --accent-foreground: 240 6% 10%;
+    --destructive: 0 65% 48%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 152 55% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 85% 45%;
+    --warning-foreground: 0 0% 100%;
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
+    --ring: 240 10% 20%;
+    --radius: 0.4rem;
+
+    /* chart series */
+    --chart-1: 152 55% 40%;
+    --chart-2: 217 60% 52%;
+    --chart-3: 35 85% 50%;
+    --chart-4: 280 45% 55%;
+    --chart-5: 0 65% 55%;
+  }
+
+  .dark {
+    /* Dark — minimal, near-monochrome */
+    --background: 240 8% 6%;
+    --foreground: 240 6% 92%;
+    --card: 240 7% 8%;
+    --card-foreground: 240 6% 92%;
+    --primary: 240 6% 92%;
+    --primary-foreground: 240 10% 8%;
+    --secondary: 240 5% 13%;
+    --secondary-foreground: 240 6% 92%;
+    --muted: 240 5% 13%;
+    --muted-foreground: 240 5% 55%;
+    --accent: 240 5% 16%;
+    --accent-foreground: 240 6% 92%;
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 152 50% 48%;
+    --success-foreground: 240 10% 8%;
+    --warning: 35 80% 55%;
+    --warning-foreground: 240 10% 8%;
+    --border: 240 5% 16%;
+    --input: 240 5% 18%;
+    --ring: 240 6% 70%;
+
+    --chart-1: 152 50% 50%;
+    --chart-2: 217 65% 62%;
+    --chart-3: 35 85% 58%;
+    --chart-4: 280 50% 65%;
+    --chart-5: 0 65% 62%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family:
+      ui-monospace, 'SF Mono', 'SFMono-Regular', 'JetBrains Mono', 'Menlo',
+      'Cascadia Code', 'Consolas', 'Liberation Mono', monospace;
+    font-feature-settings: 'tnum' 1, 'cv01' 1;
+    overscroll-behavior-y: none;
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+  /* uppercase micro-labels common in dashboard UIs */
+  .label-mono {
+    @apply text-[10px] uppercase tracking-[0.12em] text-muted-foreground;
+  }
+}
