@@ -9,9 +9,13 @@ import { Body } from '@/pages/Body'
 import { SettingsPage } from '@/pages/SettingsPage'
 
 export function App() {
+  // BASE_URL is '/' locally and '/<repo>/' on GitHub Pages; strip the trailing
+  // slash so react-router treats it as a routing basename.
+  const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || undefined
+
   return (
     <ThemeProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />

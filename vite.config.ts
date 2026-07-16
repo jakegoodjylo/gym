@@ -1,10 +1,30 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
+import { copyFileSync, existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+// Base path: '/' locally, '/<repo>/' on GitHub Pages (set via VITE_BASE in CI).
+const base = process.env.VITE_BASE || '/'
+
+// GitHub Pages has no server-side SPA fallback, so a request to a deep link
+// (e.g. /workouts) 404s on first load. Serving a copy of index.html as 404.html
+// boots the app, and the client router then resolves the path correctly.
+function spa404Fallback(): Plugin {
+  return {
+    name: 'spa-404-fallback',
+    apply: 'build',
+    closeBundle() {
+      const index = resolve(__dirname, 'dist/index.html')
+      if (existsSync(index)) copyFileSync(index, resolve(__dirname, 'dist/404.html'))
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -34,8 +54,8 @@ export default defineConfig({
         background_color: '#0b0b0f',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -45,11 +65,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        navigateFallback: '/index.html',
+        navigateFallback: `${base}index.html`,
       },
       devOptions: {
         enabled: false,
       },
     }),
+    spa404Fallback(),
   ],
 })
