@@ -24,6 +24,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # Enables GitHub Pages on the repo automatically (no manual settings toggle).
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - run: npm ci
       - name: Build
         run: npm run build
