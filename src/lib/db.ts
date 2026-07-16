@@ -122,6 +122,8 @@ export interface Settings {
   weightUnit: 'kg' | 'lb'
   theme: 'light' | 'dark' | 'system'
   restTimerSec: number
+  /** Target value per metric type (canonical units: kg for weight, raw otherwise). */
+  metricGoals?: Record<string, number>
   seededAt?: number
 }
 

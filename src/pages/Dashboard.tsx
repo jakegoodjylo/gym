@@ -62,6 +62,9 @@ export function Dashboard() {
       .map((m) => ({ date: m.date, value: round(displayWeight(m.value, settings.weightUnit)) }))
   }, [weight, settings.weightUnit])
   const latestWeight = weightPoints.at(-1)
+  const weightGoal = settings.metricGoals?.weight
+  const weightGoalDisplay =
+    weightGoal != null ? round(displayWeight(weightGoal, settings.weightUnit)) : undefined
 
   async function start() {
     const id = await createWorkout()
@@ -186,8 +189,16 @@ export function Dashboard() {
               <div className="mb-2 flex items-baseline gap-2">
                 <span className="text-2xl font-semibold tabular-nums">{latestWeight?.value}</span>
                 <span className="text-xs text-muted-foreground">{settings.weightUnit}</span>
+                {weightGoalDisplay != null && (
+                  <span className="text-[11px] text-muted-foreground">· goal {weightGoalDisplay}</span>
+                )}
               </div>
-              <LineTrend data={weightPoints} unit={settings.weightUnit} height={120} />
+              <LineTrend
+                data={weightPoints}
+                unit={settings.weightUnit}
+                height={120}
+                goal={weightGoalDisplay}
+              />
             </CardContent>
           </Card>
         </section>

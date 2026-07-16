@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronLeft, Plus, Check, Trash2, Timer, X, Trophy, MoreVertical } from 'lucide-react'
+import { ChevronLeft, Plus, Check, Trash2, Timer, X, Trophy, MoreVertical, Calculator } from 'lucide-react'
 import { db, type Exercise, type SetEntry, type Workout } from '@/lib/db'
 import {
   addSet,
@@ -21,6 +21,7 @@ import { suggestedRestSec, fmtRest } from '@/lib/rest'
 import { muscleLabel } from '@/lib/muscles'
 import { relativeDay } from '@/lib/date'
 import { ExercisePicker } from '@/components/ExercisePicker'
+import { PlateCalculator } from '@/components/PlateCalculator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -39,6 +40,7 @@ export function WorkoutSession() {
   const timer = useRestTimer()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [plateOpen, setPlateOpen] = useState(false)
 
   const workout = useLiveQuery(() => (id ? db.workouts.get(id) : undefined), [id])
   const sets = useLiveQuery(
@@ -94,7 +96,7 @@ export function WorkoutSession() {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
       {/* Top bar */}
-      <header className="safe-top sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-md pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2 px-3 py-2">
           <Button variant="ghost" size="icon-sm" onClick={() => navigate('/workouts')} aria-label="Back">
             <ChevronLeft />
@@ -161,6 +163,16 @@ export function WorkoutSession() {
           </SheetHeader>
           <div className="space-y-2">
             <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setMenuOpen(false)
+                setPlateOpen(true)
+              }}
+            >
+              <Calculator /> Plate calculator
+            </Button>
+            <Button
               variant="destructive"
               className="w-full"
               onClick={() => {
@@ -172,6 +184,8 @@ export function WorkoutSession() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <PlateCalculator open={plateOpen} onOpenChange={setPlateOpen} unit={settings.weightUnit} />
     </div>
   )
 }
@@ -404,7 +418,7 @@ function RestTimerBar({
   const mm = Math.floor(remaining / 60)
   const ss = remaining % 60
   return (
-    <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg px-3 pb-3">
+    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
       <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-2 shadow-lg">
         <Timer className="ml-1 size-4 text-primary" />
         <span className="text-lg font-semibold tabular-nums">

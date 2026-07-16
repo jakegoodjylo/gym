@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus, LineChart as LineChartIcon, Camera, Trash2, ImageIcon } from 'lucide-react'
+import { Plus, LineChart as LineChartIcon, Camera, Trash2, ImageIcon, Target, Pencil } from 'lucide-react'
 import { db, type BodyMetric, type ProgressPhoto } from '@/lib/db'
-import { addMetric, addPhoto, deleteMetric, deletePhoto } from '@/lib/repo'
+import { addMetric, addPhoto, deleteMetric, deletePhoto, updateSettings } from '@/lib/repo'
 import { useSettings } from '@/hooks/useSettings'
 import { displayWeight, toKg } from '@/lib/strength'
 import { todayISO, relativeDay } from '@/lib/date'
@@ -51,9 +51,16 @@ export function Body() {
   const [type, setType] = useState('weight')
   const [rangeDays, setRangeDays] = useState<number>(90)
   const [logOpen, setLogOpen] = useState(false)
+  const [goalOpen, setGoalOpen] = useState(false)
 
   const preset = METRIC_PRESETS.find((p) => p.type === type) ?? METRIC_PRESETS[0]
   const unit = preset.isWeight ? settings.weightUnit : preset.unit
+
+  const goalCanonical = settings.metricGoals?.[type]
+  const goalDisplay =
+    goalCanonical != null
+      ? round(preset.isWeight ? displayWeight(goalCanonical, settings.weightUnit) : goalCanonical)
+      : undefined
 
   const metrics = useLiveQuery(
     async () => (await db.metrics.where('type').equals(type).toArray()).sort((a, b) => a.date.localeCompare(b.date)),
@@ -122,6 +129,31 @@ export function Body() {
             />
           </div>
 
+          <button
+            onClick={() => setGoalOpen(true)}
+            className="mb-3 flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-left transition-colors active:bg-accent"
+          >
+            <span className="flex items-center gap-2 text-xs">
+              <Target className="size-3.5 text-chart-1" />
+              {goalDisplay != null ? (
+                <>
+                  <span className="text-muted-foreground">Goal</span>
+                  <span className="font-medium tabular-nums">
+                    {goalDisplay} {unit}
+                  </span>
+                  {latest && (
+                    <span className="text-muted-foreground">
+                      · {goalProgress(latest.value, goalDisplay, unit)}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="text-muted-foreground">Set a {preset.label.toLowerCase()} goal</span>
+              )}
+            </span>
+            <Pencil className="size-3.5 text-muted-foreground" />
+          </button>
+
           <div className="mb-3 flex gap-1">
             {RANGES.map((r) => (
               <button
@@ -139,7 +171,7 @@ export function Body() {
             ))}
           </div>
 
-          <LineTrend data={points} unit={unit} />
+          <LineTrend data={points} unit={unit} goal={goalDisplay} goalLabel={`Goal ${goalDisplay}`} />
 
           <div className="mt-4">
             <div className="label-mono mb-2">History</div>
@@ -170,8 +202,98 @@ export function Body() {
         defaultType={type}
         weightUnit={settings.weightUnit}
       />
+
+      <GoalSheet
+        open={goalOpen}
+        onOpenChange={setGoalOpen}
+        type={type}
+        label={preset.label}
+        unit={unit}
+        isWeight={!!preset.isWeight}
+        weightUnit={settings.weightUnit}
+      />
     </div>
   )
+}
+
+function GoalSheet({
+  open,
+  onOpenChange,
+  type,
+  label,
+  unit,
+  isWeight,
+  weightUnit,
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  type: string
+  label: string
+  unit?: string
+  isWeight: boolean
+  weightUnit: 'kg' | 'lb'
+}) {
+  const settings = useSettings()
+  const current = settings.metricGoals?.[type]
+  const currentDisplay = current != null ? (isWeight ? displayWeight(current, weightUnit) : current) : undefined
+  const [value, setValue] = useState('')
+
+  useEffect(() => {
+    if (open) setValue(currentDisplay != null ? String(round(currentDisplay)) : '')
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function save() {
+    const num = parseFloat(value)
+    if (Number.isNaN(num)) return
+    const canonical = isWeight ? toKg(num, weightUnit) : num
+    await updateSettings({ metricGoals: { ...(settings.metricGoals ?? {}), [type]: canonical } })
+    onOpenChange(false)
+  }
+
+  async function clear() {
+    const next = { ...(settings.metricGoals ?? {}) }
+    delete next[type]
+    await updateSettings({ metricGoals: next })
+    onOpenChange(false)
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>{label} goal</SheetTitle>
+        </SheetHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Target {unit ? `(${unit})` : ''}</Label>
+            <Input
+              autoFocus
+              type="number"
+              inputMode="decimal"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          <div className="flex gap-2">
+            {current != null && (
+              <Button variant="ghost" onClick={clear}>
+                <Trash2 /> Clear
+              </Button>
+            )}
+            <Button className="flex-1" onClick={save} disabled={!value}>
+              <Target /> Save goal
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+function goalProgress(latest: number, goal: number, unit?: string): string {
+  const diff = Math.round(Math.abs(goal - latest) * 10) / 10
+  return diff < 0.05 ? 'reached 🎯' : `${diff}${unit ? ` ${unit}` : ''} to go`
 }
 
 function MetricRow({

@@ -6,6 +6,7 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  ReferenceLine,
 } from 'recharts'
 import { fmtDayShort } from '@/lib/date'
 
@@ -19,9 +20,12 @@ interface LineTrendProps {
   unit?: string
   height?: number
   color?: string // css color, defaults to primary
+  /** Optional horizontal goal line. */
+  goal?: number
+  goalLabel?: string
 }
 
-export function LineTrend({ data, unit, height = 180, color }: LineTrendProps) {
+export function LineTrend({ data, unit, height = 180, color, goal, goalLabel }: LineTrendProps) {
   const stroke = color ?? 'hsl(var(--primary))'
   if (data.length === 0) {
     return (
@@ -49,7 +53,10 @@ export function LineTrend({ data, unit, height = 180, color }: LineTrendProps) {
           width={44}
           tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
           stroke="hsl(var(--border))"
-          domain={['dataMin - 1', 'dataMax + 1']}
+          domain={[
+            (min: number) => Math.floor(Math.min(min, goal ?? min) - 1),
+            (max: number) => Math.ceil(Math.max(max, goal ?? max) + 1),
+          ]}
           allowDecimals={false}
         />
         <Tooltip
@@ -63,6 +70,20 @@ export function LineTrend({ data, unit, height = 180, color }: LineTrendProps) {
           labelFormatter={(l) => fmtDayShort(l as string)}
           formatter={(v) => [`${v}${unit ? ` ${unit}` : ''}`, '']}
         />
+        {goal != null && (
+          <ReferenceLine
+            y={goal}
+            stroke="hsl(var(--chart-1))"
+            strokeDasharray="4 4"
+            strokeWidth={1.5}
+            label={{
+              value: goalLabel ?? `Goal ${goal}`,
+              position: 'insideTopRight',
+              fontSize: 10,
+              fill: 'hsl(var(--chart-1))',
+            }}
+          />
+        )}
         <Line
           type="monotone"
           dataKey="value"

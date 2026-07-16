@@ -42,7 +42,9 @@ const SheetContent = React.forwardRef<
       {...props}
     >
       <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-border" />
-      <div className="safe-bottom flex-1 overflow-y-auto p-4">{children}</div>
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        {children}
+      </div>
       {!hideClose && (
         <DialogPrimitive.Close className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none">
           <X className="size-5" />

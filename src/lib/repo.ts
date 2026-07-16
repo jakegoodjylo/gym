@@ -86,6 +86,37 @@ export async function updateWorkout(id: string, patch: Partial<Workout>): Promis
   await db.workouts.update(id, { ...patch, updatedAt: now() })
 }
 
+/**
+ * Clone the most recent workout that has sets into a brand-new session
+ * (same name, sets pre-filled but un-completed). Returns the new workout id,
+ * or null if there's no prior workout to repeat.
+ */
+export async function repeatLastWorkout(): Promise<string | null> {
+  const workouts = await db.workouts.orderBy('startedAt').reverse().toArray()
+  let source: Workout | undefined
+  for (const w of workouts) {
+    if ((await db.sets.where('workoutId').equals(w.id).count()) > 0) {
+      source = w
+      break
+    }
+  }
+  if (!source) return null
+
+  const srcSets = (await db.sets.where('workoutId').equals(source.id).toArray()).sort(
+    (a, b) => a.order - b.order,
+  )
+  const newId = await createWorkout(source.name)
+  for (const s of srcSets) {
+    await addSet(newId, s.exerciseId, {
+      weight: s.weight,
+      reps: s.reps,
+      durationSec: s.durationSec,
+      distanceM: s.distanceM,
+    })
+  }
+  return newId
+}
+
 export async function finishWorkout(id: string): Promise<void> {
   await db.workouts.update(id, { finishedAt: now(), updatedAt: now() })
 }

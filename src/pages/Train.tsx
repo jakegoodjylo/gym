@@ -11,9 +11,10 @@ import {
   Trophy,
   Clock,
   TrendingDown,
+  Repeat,
 } from 'lucide-react'
 import { db, type Exercise } from '@/lib/db'
-import { createWorkout } from '@/lib/repo'
+import { createWorkout, repeatLastWorkout } from '@/lib/repo'
 import { useMuscleVolume } from '@/hooks/useMuscleVolume'
 import { useExercises } from '@/hooks/useExercises'
 import { totalSets } from '@/lib/volume'
@@ -61,8 +62,11 @@ export function Train() {
           <TabsTrigger value="volume" className="flex-1">
             Volume
           </TabsTrigger>
+          <TabsTrigger value="prs" className="flex-1">
+            PRs
+          </TabsTrigger>
           <TabsTrigger value="exercises" className="flex-1">
-            Exercises
+            Library
           </TabsTrigger>
         </TabsList>
 
@@ -71,6 +75,9 @@ export function Train() {
         </TabsContent>
         <TabsContent value="volume">
           <VolumeTab />
+        </TabsContent>
+        <TabsContent value="prs">
+          <PRsTab />
         </TabsContent>
         <TabsContent value="exercises">
           <ExercisesTab />
@@ -118,8 +125,16 @@ function SessionsTab({ onStart }: { onStart: () => void }) {
     )
   }
 
+  async function repeat() {
+    const id = await repeatLastWorkout()
+    if (id) navigate(`/workouts/${id}`)
+  }
+
   return (
     <div className="space-y-2">
+      <Button variant="outline" className="mb-1 w-full" onClick={repeat}>
+        <Repeat /> Repeat last workout
+      </Button>
       {data?.map(({ w, setCount, exCount }) => {
         const duration =
           w.finishedAt && w.startedAt ? Math.round((w.finishedAt - w.startedAt) / 60000) : null
@@ -230,6 +245,85 @@ function VolumeTab() {
       <p className="mt-4 text-center text-[11px] text-muted-foreground">
         Primary muscle = 1 set · secondary = ½ set. The marker shows the minimum effective volume.
       </p>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Personal records
+// ---------------------------------------------------------------------------
+
+function PRsTab() {
+  const settings = useSettings()
+  const unit = settings.weightUnit
+
+  const rows = useLiveQuery(async () => {
+    const sets = (await db.sets.toArray()).filter(
+      (s) => s.done && s.weight != null && s.weight > 0 && s.reps != null && s.reps > 0,
+    )
+    if (sets.length === 0) return []
+    const exs = await db.exercises.toArray()
+    const exMap = new Map(exs.map((e) => [e.id, e]))
+    const workouts = await db.workouts.toArray()
+    const wMap = new Map(workouts.map((w) => [w.id, w]))
+
+    const byEx = new Map<string, typeof sets>()
+    for (const s of sets) {
+      if (!byEx.has(s.exerciseId)) byEx.set(s.exerciseId, [])
+      byEx.get(s.exerciseId)!.push(s)
+    }
+
+    const out = []
+    for (const [exId, exSets] of byEx) {
+      const ex = exMap.get(exId)
+      if (!ex) continue
+      // Heaviest set (ties broken by more reps).
+      const top = exSets.reduce((a, b) =>
+        b.weight! > a.weight! || (b.weight === a.weight && (b.reps ?? 0) > (a.reps ?? 0)) ? b : a,
+      )
+      out.push({
+        ex,
+        topWeight: top.weight!,
+        topReps: top.reps!,
+        e1rm: bestE1RM(exSets),
+        date: wMap.get(top.workoutId)?.date,
+      })
+    }
+    return out.sort((a, b) => b.e1rm - a.e1rm)
+  }, [])
+
+  if (rows && rows.length === 0) {
+    return (
+      <EmptyState
+        icon={Trophy}
+        title="No PRs yet"
+        description="Complete some weighted sets and your heaviest lifts will show up here."
+      />
+    )
+  }
+
+  return (
+    <div className="divide-y divide-border">
+      {rows?.map((r) => (
+        <div key={r.ex.id} className="flex items-center justify-between gap-3 py-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 truncate text-sm font-medium">
+              <Trophy className="size-3.5 shrink-0 text-warning" />
+              {r.ex.name}
+            </div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
+              e1RM {Math.round(displayWeight(r.e1rm, unit))} {unit}
+              {r.date && ` · ${relativeDay(r.date)}`}
+            </div>
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="text-sm font-semibold tabular-nums">
+              {Math.round(displayWeight(r.topWeight, unit) * 10) / 10} {unit}
+            </div>
+            <div className="text-[11px] text-muted-foreground tabular-nums">× {r.topReps}</div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
