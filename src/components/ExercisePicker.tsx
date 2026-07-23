@@ -57,12 +57,12 @@ export function ExercisePicker({ open, onOpenChange, onSelect }: ExercisePickerP
             }}
           />
         ) : (
-          <>
-            <SheetHeader>
+          <div className="flex h-full flex-col">
+            <SheetHeader className="shrink-0">
               <SheetTitle>Add exercise</SheetTitle>
             </SheetHeader>
 
-            <div className="sticky top-0 z-10 -mt-1 space-y-2 bg-card pb-2">
+            <div className="shrink-0 space-y-2 pb-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -88,7 +88,7 @@ export function ExercisePicker({ open, onOpenChange, onSelect }: ExercisePickerP
               </div>
             </div>
 
-            <div className="mt-1 divide-y divide-border">
+            <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
               {filtered.map((e) => (
                 <button
                   key={e.id}
@@ -113,7 +113,7 @@ export function ExercisePicker({ open, onOpenChange, onSelect }: ExercisePickerP
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
       </SheetContent>
     </Sheet>

@@ -1,6 +1,14 @@
 // Muscle taxonomy + weekly volume landmarks used for the "sets per muscle group"
-// analytics. Landmarks are rough, widely-cited training guidelines (weekly hard
-// sets): MEV = minimum effective volume, MAV = adaptive/optimal range top.
+// analytics. Weekly *hard sets* (taken within a few reps of failure) are the main
+// volume driver of hypertrophy, with strongly diminishing returns past the sweet
+// spot. Evidence (Schoenfeld/Krieger dose-response meta-analyses; Baz-Valle 2022
+// review; Pelland 2024 volume meta-regression) supports a broad ~10–18 set/week
+// optimal window for most muscles; more can add a little growth but is recovery-
+// limited and individual. Per-muscle numbers below are calibrated to that window
+// and adjusted down for small / indirectly-trained groups — they are heuristics
+// (±a few sets), not measured values.
+//   mev = minimum effective weekly sets (below = flagged under-trained)
+//   mav = top of the optimal window (above = "high": diminishing returns)
 
 export type MuscleGroup =
   | 'chest'
@@ -32,22 +40,22 @@ export interface MuscleMeta {
 }
 
 export const MUSCLES: Record<MuscleGroup, MuscleMeta> = {
-  chest: { id: 'chest', label: 'Chest', region: 'push', mev: 8, mav: 20 },
-  front_delts: { id: 'front_delts', label: 'Front Delts', region: 'push', mev: 6, mav: 16 },
-  side_delts: { id: 'side_delts', label: 'Side Delts', region: 'push', mev: 8, mav: 22 },
-  rear_delts: { id: 'rear_delts', label: 'Rear Delts', region: 'pull', mev: 6, mav: 18 },
-  triceps: { id: 'triceps', label: 'Triceps', region: 'push', mev: 6, mav: 18 },
-  lats: { id: 'lats', label: 'Lats', region: 'pull', mev: 10, mav: 20 },
-  traps: { id: 'traps', label: 'Upper Back / Traps', region: 'pull', mev: 8, mav: 20 },
-  lower_back: { id: 'lower_back', label: 'Lower Back', region: 'pull', mev: 4, mav: 12 },
-  biceps: { id: 'biceps', label: 'Biceps', region: 'pull', mev: 8, mav: 20 },
-  forearms: { id: 'forearms', label: 'Forearms', region: 'pull', mev: 4, mav: 16 },
-  quads: { id: 'quads', label: 'Quads', region: 'legs', mev: 8, mav: 20 },
-  hamstrings: { id: 'hamstrings', label: 'Hamstrings', region: 'legs', mev: 6, mav: 18 },
-  glutes: { id: 'glutes', label: 'Glutes', region: 'legs', mev: 6, mav: 16 },
-  calves: { id: 'calves', label: 'Calves', region: 'legs', mev: 8, mav: 20 },
-  abs: { id: 'abs', label: 'Abs', region: 'core', mev: 6, mav: 20 },
-  obliques: { id: 'obliques', label: 'Obliques', region: 'core', mev: 4, mav: 16 },
+  chest: { id: 'chest', label: 'Chest', region: 'push', mev: 8, mav: 18 },
+  front_delts: { id: 'front_delts', label: 'Front Delts', region: 'push', mev: 6, mav: 12 },
+  side_delts: { id: 'side_delts', label: 'Side Delts', region: 'push', mev: 8, mav: 18 },
+  rear_delts: { id: 'rear_delts', label: 'Rear Delts', region: 'pull', mev: 6, mav: 14 },
+  triceps: { id: 'triceps', label: 'Triceps', region: 'push', mev: 8, mav: 16 },
+  lats: { id: 'lats', label: 'Lats', region: 'pull', mev: 10, mav: 18 },
+  traps: { id: 'traps', label: 'Upper Back / Traps', region: 'pull', mev: 8, mav: 16 },
+  lower_back: { id: 'lower_back', label: 'Lower Back', region: 'pull', mev: 4, mav: 10 },
+  biceps: { id: 'biceps', label: 'Biceps', region: 'pull', mev: 8, mav: 16 },
+  forearms: { id: 'forearms', label: 'Forearms', region: 'pull', mev: 5, mav: 12 },
+  quads: { id: 'quads', label: 'Quads', region: 'legs', mev: 8, mav: 18 },
+  hamstrings: { id: 'hamstrings', label: 'Hamstrings', region: 'legs', mev: 8, mav: 16 },
+  glutes: { id: 'glutes', label: 'Glutes', region: 'legs', mev: 6, mav: 14 },
+  calves: { id: 'calves', label: 'Calves', region: 'legs', mev: 8, mav: 16 },
+  abs: { id: 'abs', label: 'Abs', region: 'core', mev: 6, mav: 16 },
+  obliques: { id: 'obliques', label: 'Obliques', region: 'core', mev: 4, mav: 12 },
 }
 
 export const MUSCLE_LIST: MuscleMeta[] = Object.values(MUSCLES)
