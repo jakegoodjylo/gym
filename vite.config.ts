@@ -2,11 +2,25 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
-import { copyFileSync, existsSync } from 'node:fs'
+import { copyFileSync, existsSync, readFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import { resolve } from 'node:path'
 
 // Base path: '/' locally, '/<repo>/' on GitHub Pages (set via VITE_BASE in CI).
 const base = process.env.VITE_BASE || '/'
+
+// Build stamp shown in the app footer so it's obvious a deploy landed.
+const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'))
+function buildSha(): string {
+  // GitHub Actions sets GITHUB_SHA; fall back to local git, then 'dev'.
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 7)
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim()
+  } catch {
+    return 'dev'
+  }
+}
+const buildTime = new Date().toISOString().slice(0, 10)
 
 // GitHub Pages has no server-side SPA fallback, so a request to a deep link
 // (e.g. /workouts) 404s on first load. Serving a copy of index.html as 404.html
@@ -25,6 +39,11 @@ function spa404Fallback(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   base,
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_SHA__: JSON.stringify(buildSha()),
+    __BUILD_TIME__: JSON.stringify(buildTime),
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

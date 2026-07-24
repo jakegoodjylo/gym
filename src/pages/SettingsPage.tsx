@@ -111,8 +111,10 @@ export function SettingsPage() {
           </Card>
         </Section>
 
-        <p className="pt-2 text-center text-[11px] text-muted-foreground">
-          Forge · local-first · v0.1
+        <p className="pt-2 text-center text-[11px] text-muted-foreground tabular-nums">
+          Forge · local-first · v{__APP_VERSION__}
+          <br />
+          {__BUILD_SHA__} · built {__BUILD_TIME__}
         </p>
       </div>
     </div>
