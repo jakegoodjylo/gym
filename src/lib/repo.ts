@@ -3,6 +3,7 @@ import {
   DEFAULT_SETTINGS,
   type Exercise,
   type Habit,
+  type Routine,
   type SetEntry,
   type Settings,
   type Workout,
@@ -226,6 +227,60 @@ async function recomputePR(set: SetEntry): Promise<void> {
   if (isPR !== !!set.isPR) {
     await db.sets.update(set.id, { isPR })
   }
+}
+
+// ---------------------------------------------------------------------------
+// Routines (workout templates)
+// ---------------------------------------------------------------------------
+
+export async function createRoutine(name: string, exerciseIds: string[] = []): Promise<string> {
+  const t = now()
+  const id = uid()
+  const max = await db.routines.orderBy('order').last()
+  await db.routines.put({
+    id,
+    name,
+    exerciseIds,
+    order: (max?.order ?? -1) + 1,
+    createdAt: t,
+    updatedAt: t,
+  })
+  return id
+}
+
+export async function updateRoutine(id: string, patch: Partial<Routine>): Promise<void> {
+  await db.routines.update(id, { ...patch, updatedAt: now() })
+}
+
+export async function deleteRoutine(id: string): Promise<void> {
+  await db.routines.delete(id)
+}
+
+/** Start a new workout from a routine, pre-filling each exercise from history. */
+export async function startWorkoutFromRoutine(routineId: string): Promise<string | null> {
+  const routine = await db.routines.get(routineId)
+  if (!routine) return null
+  const newId = await createWorkout(routine.name)
+  for (const exId of routine.exerciseIds) {
+    await addExerciseFromHistory(newId, exId)
+  }
+  return newId
+}
+
+/** Snapshot a workout's exercises (in order, de-duplicated) as a new routine. */
+export async function saveWorkoutAsRoutine(workoutId: string, name: string): Promise<string> {
+  const sets = (await db.sets.where('workoutId').equals(workoutId).toArray()).sort(
+    (a, b) => a.order - b.order,
+  )
+  const seen = new Set<string>()
+  const exerciseIds: string[] = []
+  for (const s of sets) {
+    if (!seen.has(s.exerciseId)) {
+      seen.add(s.exerciseId)
+      exerciseIds.push(s.exerciseId)
+    }
+  }
+  return createRoutine(name, exerciseIds)
 }
 
 // ---------------------------------------------------------------------------

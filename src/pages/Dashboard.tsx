@@ -13,6 +13,7 @@ import { currentStreak } from '@/lib/habits'
 import { todayISO, weekBounds, relativeDay } from '@/lib/date'
 import { displayWeight } from '@/lib/strength'
 import { StatTile } from '@/components/common/StatTile'
+import { ConsistencyHeatmap } from '@/components/ConsistencyHeatmap'
 import { LineTrend, type TrendPoint } from '@/components/charts/LineTrend'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -179,6 +180,14 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </section>
+
+      {/* Training consistency */}
+      {lastWorkout && (
+        <section>
+          <SectionHeader title="Consistency" to="/workouts" />
+          <ConsistencyHeatmap />
+        </section>
+      )}
 
       {/* Bodyweight */}
       {weightPoints.length > 0 && (

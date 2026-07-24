@@ -12,9 +12,12 @@ import {
   Clock,
   TrendingDown,
   Repeat,
+  Play,
+  Pencil,
+  ClipboardList,
 } from 'lucide-react'
-import { db, type Exercise } from '@/lib/db'
-import { createWorkout, repeatLastWorkout } from '@/lib/repo'
+import { db, type Exercise, type Routine, type SetEntry, type Workout } from '@/lib/db'
+import { createWorkout, repeatLastWorkout, startWorkoutFromRoutine } from '@/lib/repo'
 import { useMuscleVolume } from '@/hooks/useMuscleVolume'
 import { useExercises } from '@/hooks/useExercises'
 import { totalSets } from '@/lib/volume'
@@ -28,6 +31,10 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { StatTile } from '@/components/common/StatTile'
 import { MuscleVolumePanel } from '@/components/MuscleVolumePanel'
 import { MuscleHeatmap } from '@/components/MuscleHeatmap'
+import { WeeklyVolumeChart } from '@/components/charts/WeeklyVolumeChart'
+import { LineTrend } from '@/components/charts/LineTrend'
+import { RoutineEditor } from '@/components/RoutineEditor'
+import { useVolumeTrend } from '@/hooks/useMuscleVolume'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -93,6 +100,7 @@ export function Train() {
 
 function SessionsTab({ onStart }: { onStart: () => void }) {
   const navigate = useNavigate()
+  const routines = useLiveQuery(() => db.routines.orderBy('order').toArray(), [])
   const data = useLiveQuery(async () => {
     const workouts = await db.workouts.orderBy('startedAt').reverse().toArray()
     const sets = await db.sets.toArray()
@@ -110,31 +118,41 @@ function SessionsTab({ onStart }: { onStart: () => void }) {
     }))
   }, [])
 
-  if (data && data.length === 0) {
-    return (
-      <EmptyState
-        icon={Dumbbell}
-        title="No workouts yet"
-        description="Start a session and log your sets. Your history and volume build up here."
-        action={
-          <Button onClick={onStart}>
-            <Plus /> Start a workout
-          </Button>
-        }
-      />
-    )
-  }
+  const noWorkouts = data && data.length === 0
+  const noRoutines = !routines || routines.length === 0
 
   async function repeat() {
     const id = await repeatLastWorkout()
     if (id) navigate(`/workouts/${id}`)
   }
 
+  if (noWorkouts && noRoutines) {
+    return (
+      <div className="space-y-4">
+        <RoutinesSection routines={routines} />
+        <EmptyState
+          icon={Dumbbell}
+          title="No workouts yet"
+          description="Start a session and log your sets. Your history and volume build up here."
+          action={
+            <Button onClick={onStart}>
+              <Plus /> Start a workout
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-2">
-      <Button variant="outline" className="mb-1 w-full" onClick={repeat}>
-        <Repeat /> Repeat last workout
-      </Button>
+      <RoutinesSection routines={routines} />
+
+      {!noWorkouts && (
+        <Button variant="outline" className="mb-1 w-full" onClick={repeat}>
+          <Repeat /> Repeat last workout
+        </Button>
+      )}
       {data?.map(({ w, setCount, exCount }) => {
         const duration =
           w.finishedAt && w.startedAt ? Math.round((w.finishedAt - w.startedAt) / 60000) : null
@@ -168,6 +186,79 @@ function SessionsTab({ onStart }: { onStart: () => void }) {
   )
 }
 
+function RoutinesSection({ routines }: { routines: Routine[] | undefined }) {
+  const navigate = useNavigate()
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editing, setEditing] = useState<Routine | null>(null)
+
+  async function start(id: string) {
+    const wid = await startWorkoutFromRoutine(id)
+    if (wid) navigate(`/workouts/${wid}`)
+  }
+  function openNew() {
+    setEditing(null)
+    setEditorOpen(true)
+  }
+  function openEdit(r: Routine) {
+    setEditing(r)
+    setEditorOpen(true)
+  }
+
+  return (
+    <div className="mb-2">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="label-mono">Routines</span>
+        {routines && routines.length > 0 && (
+          <button
+            onClick={openNew}
+            className="flex items-center gap-1 text-[11px] text-muted-foreground active:text-foreground"
+          >
+            <Plus className="size-3" /> New
+          </button>
+        )}
+      </div>
+
+      {routines && routines.length > 0 ? (
+        <div className="space-y-2">
+          {routines.map((r) => (
+            <div
+              key={r.id}
+              className="flex items-center gap-2 rounded-lg border border-border bg-card p-3"
+            >
+              <ClipboardList className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{r.name}</div>
+                <div className="text-[11px] text-muted-foreground tabular-nums">
+                  {r.exerciseIds.length} exercise{r.exerciseIds.length === 1 ? '' : 's'}
+                </div>
+              </div>
+              <button
+                onClick={() => openEdit(r)}
+                aria-label="Edit routine"
+                className="p-1.5 text-muted-foreground active:text-foreground"
+              >
+                <Pencil className="size-4" />
+              </button>
+              <Button size="sm" onClick={() => start(r.id)}>
+                <Play /> Start
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <button
+          onClick={openNew}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-3 text-xs text-muted-foreground active:bg-accent"
+        >
+          <Plus className="size-4" /> Create a routine to start faster
+        </button>
+      )}
+
+      <RoutineEditor open={editorOpen} onOpenChange={setEditorOpen} routine={editing} />
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Volume
 // ---------------------------------------------------------------------------
@@ -177,6 +268,7 @@ function VolumeTab() {
   const base = addWeeks(new Date(), offset)
   const { start, end } = weekBounds(base)
   const volume = useMuscleVolume(start, end)
+  const trend = useVolumeTrend(12)
 
   const total = volume ? totalSets(volume) : 0
   const undertrained = volume
@@ -225,6 +317,15 @@ function VolumeTab() {
         <MuscleHeatmap volume={volume} />
       </div>
 
+      <div className="mb-4">
+        <div className="label-mono mb-2">Weekly volume · last 12 weeks</div>
+        {trend ? (
+          <WeeklyVolumeChart data={trend} />
+        ) : (
+          <div className="h-40 animate-pulse rounded-lg bg-secondary" />
+        )}
+      </div>
+
       {undertrained.length > 0 && (
         <div className="mb-4 rounded-lg border border-warning/40 bg-warning/5 p-3">
           <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-warning">
@@ -256,6 +357,7 @@ function VolumeTab() {
 function PRsTab() {
   const settings = useSettings()
   const unit = settings.weightUnit
+  const [selected, setSelected] = useState<Exercise | null>(null)
 
   const rows = useLiveQuery(async () => {
     const sets = (await db.sets.toArray()).filter(
@@ -305,7 +407,11 @@ function PRsTab() {
   return (
     <div className="divide-y divide-border">
       {rows?.map((r) => (
-        <div key={r.ex.id} className="flex items-center justify-between gap-3 py-3">
+        <button
+          key={r.ex.id}
+          onClick={() => setSelected(r.ex)}
+          className="flex w-full items-center justify-between gap-3 py-3 text-left transition-colors active:bg-accent"
+        >
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 truncate text-sm font-medium">
               <Trophy className="size-3.5 shrink-0 text-warning" />
@@ -322,8 +428,10 @@ function PRsTab() {
             </div>
             <div className="text-[11px] text-muted-foreground tabular-nums">× {r.topReps}</div>
           </div>
-        </div>
+        </button>
       ))}
+
+      <ExerciseDetailSheet exercise={selected} onClose={() => setSelected(null)} />
     </div>
   )
 }
@@ -381,26 +489,38 @@ function ExercisesTab() {
 
 function ExerciseDetailSheet({ exercise, onClose }: { exercise: Exercise | null; onClose: () => void }) {
   const settings = useSettings()
-  const stats = useLiveQuery(async () => {
+  const unit = settings.weightUnit
+  const data = useLiveQuery(async () => {
     if (!exercise) return null
     const sets = (await db.sets.where('exerciseId').equals(exercise.id).toArray()).filter((s) => s.done)
-    const workouts = await db.workouts.bulkGet([...new Set(sets.map((s) => s.workoutId))])
-    const lastDate = workouts
-      .filter(Boolean)
-      .map((w) => w!.date)
-      .sort()
-      .at(-1)
+    const wIds = [...new Set(sets.map((s) => s.workoutId))]
+    const workouts = (await db.workouts.bulkGet(wIds)).filter(Boolean) as Workout[]
+    const wMap = new Map(workouts.map((w) => [w.id, w]))
+
+    // Group completed sets by session.
+    const byWorkout = new Map<string, SetEntry[]>()
+    for (const s of sets) {
+      if (!byWorkout.has(s.workoutId)) byWorkout.set(s.workoutId, [])
+      byWorkout.get(s.workoutId)!.push(s)
+    }
+    const sessions = [...byWorkout.entries()]
+      .map(([id, s]) => ({ id, date: wMap.get(id)?.date, sets: s, e1rm: bestE1RM(s) }))
+      .filter((x) => x.date)
+      .sort((a, b) => a.date!.localeCompare(b.date!))
+
     return {
       best1rm: bestE1RM(sets),
       totalLoad: volumeLoad(sets),
-      sessions: new Set(sets.map((s) => s.workoutId)).size,
-      lastDate,
+      sessionCount: byWorkout.size,
+      lastDate: sessions.at(-1)?.date,
+      series: sessions.filter((x) => x.e1rm > 0).map((x) => ({ date: x.date!, e1rmKg: x.e1rm })),
+      recent: sessions.slice(-6).reverse(),
     }
   }, [exercise?.id])
 
   return (
     <Sheet open={!!exercise} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent>
+      <SheetContent className="max-h-[92dvh]">
         {exercise && (
           <>
             <SheetHeader>
@@ -422,17 +542,41 @@ function ExerciseDetailSheet({ exercise, onClose }: { exercise: Exercise | null;
               <div className="grid grid-cols-3 gap-2">
                 <StatTile
                   label="Best e1RM"
-                  value={stats?.best1rm ? Math.round(displayWeight(stats.best1rm, settings.weightUnit)) : '—'}
-                  unit={stats?.best1rm ? settings.weightUnit : undefined}
+                  value={data?.best1rm ? Math.round(displayWeight(data.best1rm, unit)) : '—'}
+                  unit={data?.best1rm ? unit : undefined}
                 />
-                <StatTile label="Sessions" value={stats?.sessions ?? '—'} />
-                <StatTile label="Last done" value={stats?.lastDate ? fmtDayShort(stats.lastDate) : '—'} />
+                <StatTile label="Sessions" value={data?.sessionCount ?? '—'} />
+                <StatTile label="Last done" value={data?.lastDate ? fmtDayShort(data.lastDate) : '—'} />
               </div>
 
-              {stats?.best1rm ? (
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Trophy className="size-3.5 text-warning" /> Estimated one-rep max from your best logged set.
-                </p>
+              {data && data.series.length >= 2 && (
+                <div>
+                  <div className="label-mono mb-2">Estimated 1RM over time</div>
+                  <LineTrend
+                    data={data.series.map((p) => ({
+                      date: p.date,
+                      value: Math.round(displayWeight(p.e1rmKg, unit)),
+                    }))}
+                    unit={unit}
+                    height={150}
+                  />
+                </div>
+              )}
+
+              {data && data.recent.length > 0 ? (
+                <div>
+                  <div className="label-mono mb-2">Recent sessions</div>
+                  <div className="divide-y divide-border">
+                    {data.recent.map((s) => (
+                      <div key={s.id} className="flex items-baseline justify-between gap-3 py-2 text-xs">
+                        <span className="shrink-0 text-muted-foreground">{fmtDayShort(s.date!)}</span>
+                        <span className="text-right tabular-nums">
+                          {s.sets.map((x) => setSummary(x, unit)).join(', ')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <p className="text-xs text-muted-foreground">No sets logged yet.</p>
               )}
@@ -442,6 +586,15 @@ function ExerciseDetailSheet({ exercise, onClose }: { exercise: Exercise | null;
       </SheetContent>
     </Sheet>
   )
+}
+
+function setSummary(s: SetEntry, unit: 'kg' | 'lb'): string {
+  const w = s.weight != null ? Math.round(displayWeight(s.weight, unit) * 10) / 10 : null
+  if (w != null && s.reps != null) return `${w}×${s.reps}`
+  if (s.reps != null) return `${s.reps} reps`
+  if (s.durationSec != null) return `${s.durationSec}s`
+  if (s.distanceM != null) return `${(s.distanceM / 1000).toFixed(1)}km`
+  return '—'
 }
 
 function fmt(n: number): string {

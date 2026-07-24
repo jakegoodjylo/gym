@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronLeft, Plus, Check, Trash2, Timer, X, Trophy, MoreVertical, Calculator } from 'lucide-react'
+import { ChevronLeft, Plus, Check, Trash2, Timer, X, Trophy, MoreVertical, Calculator, ClipboardList } from 'lucide-react'
 import { db, type Exercise, type SetEntry, type Workout } from '@/lib/db'
 import {
   addSet,
@@ -9,6 +9,7 @@ import {
   deleteSet,
   deleteWorkout,
   finishWorkout,
+  saveWorkoutAsRoutine,
   toggleSetDone,
   updateSet,
   updateWorkout,
@@ -171,6 +172,20 @@ export function WorkoutSession() {
               }}
             >
               <Calculator /> Plate calculator
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={totalSets === 0}
+              onClick={async () => {
+                const name = prompt('Routine name', workout?.name || 'Routine')?.trim()
+                if (name && id) {
+                  await saveWorkoutAsRoutine(id, name)
+                  setMenuOpen(false)
+                }
+              }}
+            >
+              <ClipboardList /> Save as routine
             </Button>
             <Button
               variant="destructive"

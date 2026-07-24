@@ -117,6 +117,17 @@ export interface ProgressPhoto {
   createdAt: number
 }
 
+/** A reusable workout template: an ordered list of exercises to start from. */
+export interface Routine {
+  id: string
+  name: string
+  /** Ordered exercise ids; sets are pre-filled from history when started. */
+  exerciseIds: string[]
+  order: number
+  createdAt: number
+  updatedAt: number
+}
+
 export interface Settings {
   id: 'app'
   weightUnit: 'kg' | 'lb'
@@ -140,6 +151,7 @@ export class GymDB extends Dexie {
   metrics!: Table<BodyMetric, string>
   photos!: Table<ProgressPhoto, string>
   settings!: Table<Settings, string>
+  routines!: Table<Routine, string>
 
   constructor() {
     super('forge')
@@ -152,6 +164,10 @@ export class GymDB extends Dexie {
       metrics: 'id, date, type, [type+date]',
       photos: 'id, date',
       settings: 'id',
+    })
+    // v2: reusable workout templates.
+    this.version(2).stores({
+      routines: 'id, order',
     })
   }
 }
