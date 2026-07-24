@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Plus, Search, Dumbbell } from 'lucide-react'
 import {
   Sheet,
@@ -28,6 +28,7 @@ export function ExercisePicker({ open, onOpenChange, onSelect }: ExercisePickerP
   const [query, setQuery] = useState('')
   const [muscle, setMuscle] = useState<'all' | MuscleGroup>('all')
   const [creating, setCreating] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -47,7 +48,16 @@ export function ExercisePicker({ open, onOpenChange, onSelect }: ExercisePickerP
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="h-[92vh]">
+      <SheetContent
+        className="h-[92dvh]"
+        // Focus the search field without letting the browser scroll the whole
+        // sheet up when the mobile keyboard opens (keeps the header on-screen).
+        onOpenAutoFocus={(e) => {
+          if (creating) return
+          e.preventDefault()
+          searchRef.current?.focus({ preventScroll: true })
+        }}
+      >
         {creating ? (
           <CreateExerciseForm
             onCancel={() => setCreating(false)}
@@ -66,7 +76,7 @@ export function ExercisePicker({ open, onOpenChange, onSelect }: ExercisePickerP
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  autoFocus
+                  ref={searchRef}
                   placeholder="Search exercises…"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
