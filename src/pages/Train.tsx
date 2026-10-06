@@ -487,9 +487,14 @@ function ExercisesTab() {
   )
 }
 
+const RECENT_SESSIONS = 6
+
 function ExerciseDetailSheet({ exercise, onClose }: { exercise: Exercise | null; onClose: () => void }) {
   const settings = useSettings()
   const unit = settings.weightUnit
+  // Keyed by exercise so opening a different one starts collapsed again.
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const showAll = !!exercise && expandedId === exercise.id
   const data = useLiveQuery(async () => {
     if (!exercise) return null
     const sets = (await db.sets.where('exerciseId').equals(exercise.id).toArray()).filter((s) => s.done)
@@ -514,7 +519,7 @@ function ExerciseDetailSheet({ exercise, onClose }: { exercise: Exercise | null;
       sessionCount: byWorkout.size,
       lastDate: sessions.at(-1)?.date,
       series: sessions.filter((x) => x.e1rm > 0).map((x) => ({ date: x.date!, e1rmKg: x.e1rm })),
-      recent: sessions.slice(-6).reverse(),
+      history: sessions.slice().reverse(),
     }
   }, [exercise?.id])
 
@@ -563,11 +568,11 @@ function ExerciseDetailSheet({ exercise, onClose }: { exercise: Exercise | null;
                 </div>
               )}
 
-              {data && data.recent.length > 0 ? (
+              {data && data.history.length > 0 ? (
                 <div>
-                  <div className="label-mono mb-2">Recent sessions</div>
+                  <div className="label-mono mb-2">{showAll ? 'All sessions' : 'Recent sessions'}</div>
                   <div className="divide-y divide-border">
-                    {data.recent.map((s) => (
+                    {(showAll ? data.history : data.history.slice(0, RECENT_SESSIONS)).map((s) => (
                       <div key={s.id} className="flex items-baseline justify-between gap-3 py-2 text-xs">
                         <span className="shrink-0 text-muted-foreground">{fmtDayShort(s.date!)}</span>
                         <span className="text-right tabular-nums">
@@ -576,6 +581,16 @@ function ExerciseDetailSheet({ exercise, onClose }: { exercise: Exercise | null;
                       </div>
                     ))}
                   </div>
+                  {data.history.length > RECENT_SESSIONS && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1 w-full text-muted-foreground"
+                      onClick={() => setExpandedId(showAll ? null : exercise.id)}
+                    >
+                      {showAll ? 'Show recent only' : `Show all ${data.history.length} sessions`}
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">No sets logged yet.</p>
