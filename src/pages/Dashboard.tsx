@@ -11,7 +11,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { totalSets } from '@/lib/volume'
 import { MUSCLE_LIST, volumeStatus } from '@/lib/muscles'
 import { currentStreak } from '@/lib/habits'
-import { todayISO, weekBounds, relativeDay } from '@/lib/date'
+import { todayISO, weekBounds, relativeDay, daysAgo, fromISODate } from '@/lib/date'
 import { displayWeight } from '@/lib/strength'
 import { StatTile } from '@/components/common/StatTile'
 import { ConsistencyHeatmap } from '@/components/ConsistencyHeatmap'
@@ -55,9 +55,14 @@ export function Dashboard() {
 
   const doneToday = habits?.filter((h) => logsByHabit.get(h.id)?.has(today)).length ?? 0
   const total = volume ? totalSets(volume) : 0
+  // Biggest shortfall first, so the most neglected group leads.
   const undertrained = volume
-    ? MUSCLE_LIST.filter((m) => ['under', 'none'].includes(volumeStatus(m.id, volume[m.id])))
+    ? MUSCLE_LIST.filter((m) => ['under', 'none'].includes(volumeStatus(m.id, volume[m.id]))).sort(
+        (a, b) => b.mev - volume[b.id] - (a.mev - volume[a.id]),
+      )
     : []
+  // Days left in the (Monday-start) week, counting today.
+  const daysLeft = daysAgo(today, fromISODate(weekBounds().end)) + 1
 
   const weightPoints: TrendPoint[] = useMemo(() => {
     const cutoff = daysAgoISO(90)
@@ -186,11 +191,16 @@ export function Dashboard() {
               <p className="text-sm text-muted-foreground">No sets logged this week yet.</p>
             ) : (
               <>
-                <p className="mb-2 text-xs text-muted-foreground">Muscle groups below target:</p>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Below target ·{' '}
+                  <span className={cn(daysLeft <= 2 && 'text-warning')}>
+                    {daysLeft === 1 ? 'last day of the week' : `${daysLeft} days left this week`}
+                  </span>
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {undertrained.map((m) => (
-                    <Badge key={m.id} variant="outline">
-                      {m.label}
+                    <Badge key={m.id} variant="outline" className="tabular-nums">
+                      {m.label} {fmt(volume![m.id])}/{m.mev}
                     </Badge>
                   ))}
                 </div>

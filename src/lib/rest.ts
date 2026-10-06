@@ -4,6 +4,13 @@ import type { MuscleGroup } from './muscles'
 // Large muscle groups / heavy compounds warrant longer rest.
 const BIG_MUSCLES = new Set<MuscleGroup>(['quads', 'hamstrings', 'glutes', 'chest', 'lats', 'lower_back'])
 
+/** Multi-joint movement that loads a large muscle (squat, bench, row, …). */
+export function isHeavyCompound(ex: Exercise): boolean {
+  const totalMuscles = ex.primaryMuscles.length + ex.secondaryMuscles.length
+  const isCompound = ex.primaryMuscles.length >= 2 || totalMuscles >= 3
+  return isCompound && ex.primaryMuscles.some((m) => BIG_MUSCLES.has(m))
+}
+
 /**
  * Suggested rest between sets, in seconds, inferred from the exercise:
  *  - heavy compound (multi-joint, hits a large muscle)  → 3:00
@@ -15,12 +22,9 @@ export function suggestedRestSec(ex: Exercise): number {
   if (ex.type === 'cardio') return 60
   if (ex.type === 'duration') return 45
 
+  if (isHeavyCompound(ex)) return 180
   const totalMuscles = ex.primaryMuscles.length + ex.secondaryMuscles.length
-  const isCompound = ex.primaryMuscles.length >= 2 || totalMuscles >= 3
-  const hitsBig = ex.primaryMuscles.some((m) => BIG_MUSCLES.has(m))
-
-  if (hitsBig && isCompound) return 180
-  if (isCompound) return 120
+  if (ex.primaryMuscles.length >= 2 || totalMuscles >= 3) return 120
   return 90
 }
 

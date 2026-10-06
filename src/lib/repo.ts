@@ -12,6 +12,7 @@ import { PRESET_EXERCISES } from '@/data/exercises'
 import { uid } from './utils'
 import { todayISO } from './date'
 import { set1RM } from './strength'
+import { planNextSession } from './progression'
 
 const now = () => Date.now()
 
@@ -204,24 +205,23 @@ export async function lastLoggedSets(exerciseId: string, beforeWorkoutId?: strin
 
 /**
  * Add an exercise to a workout, pre-populating its sets from the last time it
- * was logged (values carried over, left un-completed). Falls back to one empty
- * set when there's no history.
+ * was logged, progressed where earned (see planNextSession) and left
+ * un-completed. Falls back to one empty set when there's no history.
  */
 export async function addExerciseFromHistory(workoutId: string, exerciseId: string): Promise<void> {
-  const template = await lastLoggedSets(exerciseId, workoutId)
-  const usable = template.filter((s) => s.weight != null || s.reps != null || s.durationSec != null || s.distanceM != null)
+  const [template, exercise, settings] = await Promise.all([
+    lastLoggedSets(exerciseId, workoutId),
+    db.exercises.get(exerciseId),
+    getSettings(),
+  ])
+  const planned = exercise ? planNextSession(exercise, template, settings.weightUnit).sets : []
 
-  if (usable.length === 0) {
+  if (planned.length === 0) {
     await addSet(workoutId, exerciseId)
     return
   }
-  for (const t of usable) {
-    await addSet(workoutId, exerciseId, {
-      weight: t.weight,
-      reps: t.reps,
-      durationSec: t.durationSec,
-      distanceM: t.distanceM,
-    })
+  for (const values of planned) {
+    await addSet(workoutId, exerciseId, values)
   }
 }
 

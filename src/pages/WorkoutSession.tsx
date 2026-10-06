@@ -19,6 +19,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { useRestTimer } from '@/hooks/useRestTimer'
 import { displayWeight, toKg } from '@/lib/strength'
 import { suggestedRestSec, fmtRest } from '@/lib/rest'
+import { planNextSession } from '@/lib/progression'
 import { muscleLabel } from '@/lib/muscles'
 import { relativeDay } from '@/lib/date'
 import { ExercisePicker } from '@/components/ExercisePicker'
@@ -229,6 +230,7 @@ function ExerciseBlock({
   const isCardio = exercise.type === 'cardio'
   const isDuration = exercise.type === 'duration'
   const restSec = suggestedRestSec(exercise)
+  const goal = planNextSession(exercise, previous, unit).hint
 
   // Add set duplicating last values for quick logging.
   async function add() {
@@ -260,6 +262,7 @@ function ExerciseBlock({
             .filter((s) => s.done)
             .map((s) => summarizeSet(s, unit, exercise))
             .join(', ') || '—'}
+          {goal && <span className="ml-2 text-foreground">· Goal {goal}</span>}
         </div>
       )}
 
