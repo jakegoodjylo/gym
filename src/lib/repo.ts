@@ -69,6 +69,8 @@ export async function exerciseMap(): Promise<Map<string, Exercise>> {
 // ---------------------------------------------------------------------------
 
 export async function createWorkout(name?: string, date = todayISO()): Promise<string> {
+  // Only one session at a time: starting a new one closes any still open.
+  await closeOpenWorkouts(0)
   const t = now()
   const id = uid()
   const workout: Workout = {
@@ -120,6 +122,27 @@ export async function repeatLastWorkout(): Promise<string | null> {
 
 export async function finishWorkout(id: string): Promise<void> {
   await db.workouts.update(id, { finishedAt: now(), updatedAt: now() })
+}
+
+/** A workout left open with no activity for this long is treated as forgotten. */
+export const STALE_WORKOUT_MS = 2 * 60 * 60 * 1000
+
+/**
+ * Auto-close workouts that were never finished. An open workout is closed when
+ * it's been idle longer than `idleMs` (or always, when `idleMs` is 0). Its
+ * `finishedAt` is backdated to the last edit so durations stay honest; a
+ * workout with no sets at all is just discarded.
+ */
+export async function closeOpenWorkouts(idleMs = STALE_WORKOUT_MS): Promise<void> {
+  const open = (await db.workouts.toArray()).filter((w) => !w.finishedAt)
+  const t = now()
+  for (const w of open) {
+    const sets = await db.sets.where('workoutId').equals(w.id).toArray()
+    const lastActivity = Math.max(w.updatedAt, ...sets.map((s) => s.updatedAt))
+    if (t - lastActivity < idleMs) continue
+    if (sets.length === 0) await deleteWorkout(w.id)
+    else await db.workouts.update(w.id, { finishedAt: lastActivity, updatedAt: t })
+  }
 }
 
 export async function deleteWorkout(id: string): Promise<void> {
