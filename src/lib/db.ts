@@ -136,6 +136,8 @@ export interface Settings {
   /** Target value per metric type (canonical units: kg for weight, raw otherwise). */
   metricGoals?: Record<string, number>
   seededAt?: number
+  /** When a backup was last exported (or restored from). */
+  lastBackupAt?: number
 }
 
 // ---------------------------------------------------------------------------

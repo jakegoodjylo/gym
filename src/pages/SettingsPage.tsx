@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { Download, Upload, Sun, Moon, Monitor, Check } from 'lucide-react'
 import { useSettings } from '@/hooks/useSettings'
 import { updateSettings } from '@/lib/repo'
-import { downloadBackup, importBackup } from '@/lib/backup'
+import { daysSinceBackup, downloadBackup, importBackup } from '@/lib/backup'
+import { isStoragePersisted } from '@/lib/storage'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,6 +21,12 @@ export function SettingsPage() {
   const settings = useSettings()
   const fileRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const [persisted, setPersisted] = useState<boolean | null>(null)
+  const backupAge = useLiveQuery(() => daysSinceBackup(), [])
+
+  useEffect(() => {
+    void isStoragePersisted().then(setPersisted)
+  }, [])
 
   async function onImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -102,6 +110,20 @@ export function SettingsPage() {
                   onChange={onImport}
                 />
               </div>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 pt-1 text-[11px]">
+                <dt className="text-muted-foreground">Last backup</dt>
+                <dd className="tabular-nums">
+                  {!settings.lastBackupAt
+                    ? 'never'
+                    : backupAge === 0
+                      ? 'today'
+                      : `${backupAge} day${backupAge === 1 ? '' : 's'} ago`}
+                </dd>
+                <dt className="text-muted-foreground">Storage</dt>
+                <dd className={cn(persisted === false && 'text-warning')}>
+                  {persisted == null ? '—' : persisted ? 'persistent' : 'may be cleared by the browser'}
+                </dd>
+              </dl>
               {status && (
                 <p className="flex items-center gap-1.5 text-xs text-success">
                   <Check className="size-3.5" /> {status}

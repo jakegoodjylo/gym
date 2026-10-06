@@ -4,9 +4,13 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import { App } from './App'
 import { closeOpenWorkouts, ensureSeeded } from '@/lib/repo'
+import { requestPersistentStorage } from '@/lib/storage'
 
 // Seed the exercise library + default settings on first run.
 void ensureSeeded()
+
+// All data is local-only, so ask the browser not to evict it.
+void requestPersistentStorage()
 
 // Close any workout left open and idle (forgot to hit Finish) — on launch and
 // whenever the PWA comes back to the foreground.

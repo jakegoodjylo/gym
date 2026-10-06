@@ -2,9 +2,10 @@ import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { format } from 'date-fns'
-import { Plus, Dumbbell, ChevronRight, Flame, Activity } from 'lucide-react'
+import { Plus, Dumbbell, ChevronRight, Flame, Activity, Download } from 'lucide-react'
 import { db } from '@/lib/db'
 import { createWorkout, toggleHabit } from '@/lib/repo'
+import { BACKUP_NUDGE_DAYS, daysSinceBackup, downloadBackup } from '@/lib/backup'
 import { useCurrentWeekVolume } from '@/hooks/useMuscleVolume'
 import { useSettings } from '@/hooks/useSettings'
 import { totalSets } from '@/lib/volume'
@@ -36,6 +37,8 @@ export function Dashboard() {
     const { start, end } = weekBounds()
     return db.workouts.where('date').between(start, end, true, true).count()
   }, [])
+  // Re-runs when settings change, so the nudge clears right after an export.
+  const backupAge = useLiveQuery(() => daysSinceBackup(), [])
   const weight = useLiveQuery(
     async () => (await db.metrics.where('type').equals('weight').toArray()).sort((a, b) => a.date.localeCompare(b.date)),
     [],
@@ -78,6 +81,22 @@ export function Dashboard() {
         <p className="label-mono">{format(new Date(), 'EEEE, d MMMM')}</p>
         <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">Overview</h1>
       </div>
+
+      {backupAge != null && backupAge >= BACKUP_NUDGE_DAYS && (
+        <Card>
+          <CardContent className="flex items-center justify-between gap-3 p-3">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-warning">Back up your data</div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                Only stored on this device · last backup {backupAge} days ago
+              </div>
+            </div>
+            <Button variant="outline" onClick={() => downloadBackup()}>
+              <Download /> Export
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Week snapshot */}
       <div className="grid grid-cols-3 gap-2">
